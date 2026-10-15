@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        USERNAME: jill
+        GROUPNAME: jill
+        UID: 1001
+        GID: 1002
+    user: "1001:1002"
+    container_name: agent-webui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount agent binary from host
+      - /home/jill/.local/bin/agy:/usr/local/bin/agy:ro
+      # Mount agent auth & config from host
+      - /home/jill/.gemini:/home/jill/.gemini:rw
+      # Mount workspaces directory
+      - ./workspaces:/workspaces:rw
+      # Mount static directory for frontend assets
+      - ./static:/app/static:ro
+      # Mount app source
+      - ./app:/app/app:ro
+      # Mount tests
+      - ./tests:/app/tests:ro
+    env_file:
+      - .env
+    environment:
+      - WORKSPACE_BASE=/workspaces
+      - AGENT_BIN=/usr/local/bin/agy
+      - AGENT_ARGS=--dangerously-skip-permissions
+      - HOME=/home/jill
+      - TERM=xterm-256color
+      - AUTH_USERNAME=${AUTH_USERNAME:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY:-}
+      - PUBLIC_LINK_SECRET=${PUBLIC_LINK_SECRET:-}
+
+

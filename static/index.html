@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Web UI</title>
+  <!-- xterm.js CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <!-- Marked for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- KaTeX for LaTeX math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked-katex-extension@5.1.13/lib/index.umd.js"></script>
+  <!-- Mermaid for flowchart and diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+  <!-- Raphael and flowchart.js for classic flowchart syntax -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.18.0/flowchart.min.js"></script>
+  <!-- DOMPurify for security -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.2/dist/purify.min.js"></script>
+  <!-- Ace Editor for source code syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.2/ace.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.2/ext-modelist.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.2/theme-one_dark.js"></script>
+  <!-- TOAST UI Image Editor -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.8/dist/tui-color-picker.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tui-image-editor/3.15.3/tui-image-editor.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tui-code-snippet/1.5.2/tui-code-snippet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tui-color-picker@2.2.8/dist/tui-color-picker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tui-image-editor/3.15.3/tui-image-editor.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css?v=17">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo"><svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+        <span class="brand-title">Agent Web UI</span>
+      </div>
+      <div class="topbar-status">
+        <!-- Limits Display Widget -->
+        <div id="limits-container" class="limits-container" title="Click for quota limits details">
+          <div class="limits-badges" id="limits-badges">
+            <span class="limit-badge limit-5h" id="limit-5h-badge" title="5-hour limit (remaining)">
+              <span class="limit-label">5h:</span>
+              <span class="limit-val" id="limit-5h-val">--%</span>
+            </span>
+            <span class="limit-badge limit-weekly" id="limit-weekly-badge" title="Weekly limit (remaining)">
+              <span class="limit-label">Week:</span>
+              <span class="limit-val" id="limit-weekly-val">--%</span>
+            </span>
+          </div>
+          <button id="btn-refresh-limits" class="btn-refresh-limits" title="Refresh limits via API">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><polyline points="21 21 21 16 16 16"></polyline></svg>
+          </button>
+
+          <!-- Dropdown/Tooltip for Limits -->
+          <div id="limits-dropdown" class="limits-dropdown" style="display: none;">
+            <div class="limits-dropdown-header">
+              <span class="limits-dropdown-title">Agent Quota Limits</span>
+              <span id="limits-last-updated" class="limits-last-updated">Loading...</span>
+            </div>
+            <div id="limits-groups-list" class="limits-groups-list"></div>
+          </div>
+        </div>
+
+        <span id="user-info" class="user-badge" style="display: none;">
+          <span class="user-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+          <span id="user-name"></span>
+        </span>
+        <button id="btn-logout" class="btn-logout" style="display: none;" title="Log out"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>Log out</span></button>
+        <span id="connection-badge" class="badge badge-disconnected">Disconnected</span>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Left Sidebar: Workspace & Files -->
+      <aside class="sidebar">
+        <div class="sidebar-section workspace-selector-sec">
+          <div class="workspace-active-card" id="workspace-active-trigger" role="button" tabindex="0" title="Click to select, create or delete workspaces">
+            <div class="workspace-active-info">
+              <span class="workspace-active-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
+              <span class="workspace-active-name" id="current-workspace-name">Select workspace...</span>
+            </div>
+            <span class="workspace-switch-chevron"><svg class="ui-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+          </div>
+
+          <div class="workspace-actions-row">
+            <button id="btn-quick-backup" title="Create quick backup of workspace (.backup/{datetime})" class="btn-icon ws-action-btn" disabled><svg class="ui-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg><span>Backup</span></button>
+            <button id="btn-download-ws" title="Download workspace (.zip)" class="btn-icon ws-action-btn" disabled><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Export</span></button>
+            <button id="btn-upload-ws" title="Upload workspace (.zip)" class="btn-icon ws-action-btn"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span>Import</span></button>
+            <button id="btn-open-workspace-modal" style="display: none;" title="Manage workspaces"></button>
+          </div>
+          <select id="workspace-select" style="display: none;">
+            <option value="" disabled selected>Select workspace...</option>
+          </select>
+        </div>
+
+        <div class="sidebar-section file-explorer-sec">
+          <div class="section-header">
+            <h3>Files</h3>
+            <div class="header-actions">
+              <button id="btn-upload-file" title="Upload files to workspace" class="btn-icon" disabled><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span>Upload</span></button>
+              <button id="btn-new-file" title="New file" class="btn-icon" disabled><svg class="ui-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>File</span></button>
+              <button id="btn-refresh-files" title="Refresh files" class="btn-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><polyline points="21 21 21 16 16 16"></polyline></svg></button>
+            </div>
+          </div>
+          <div id="new-file-form" class="new-file-form" style="display: none;">
+            <input type="text" id="new-file-name" placeholder="filename.txt or README.md">
+            <button id="btn-create-file-submit" class="btn-primary" title="Create file">Create</button>
+            <button id="btn-create-file-cancel" class="btn-icon" title="Cancel"><svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div id="file-tree" class="file-tree">
+            <div class="empty-state">Select a workspace above to view files.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Main: Tabs & Viewers -->
+      <main class="content-area">
+        <!-- Tabs Header -->
+        <div class="tabs-bar" id="tabs-bar">
+          <div class="tab active" data-tab-id="terminal">
+            <span class="tab-icon"><svg class="ui-icon" viewBox="0 0 24 24"><polyline points="4 17 10 12 4 7"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></span>
+            <span class="tab-title">Agent (TTY)</span>
+          </div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-views">
+          <!-- Always existing Terminal View -->
+          <div class="tab-pane active" id="pane-terminal">
+            <div id="terminal-container"></div>
+          </div>
+
+          <!-- Dynamic File Views will be appended here -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Tree Node Context Menu -->
+  <div id="tree-context-menu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" id="ctx-menu-execute" style="display: none;">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+      <span>Execute</span>
+    </div>
+    <div class="context-menu-item" id="ctx-menu-upload-folder" style="display: none;">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
+      <span>Upload files here</span>
+    </div>
+    <div class="context-menu-item" id="ctx-menu-share">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></span>
+      <span>Public link</span>
+    </div>
+    <div class="context-menu-item" id="ctx-menu-restore" style="display: none;">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+      <span>Restore from backup</span>
+    </div>
+    <div class="context-menu-item" id="ctx-menu-quick-backup" style="display: none;">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg></span>
+      <span>Create new backup</span>
+    </div>
+    <div class="context-menu-item" id="ctx-menu-rename">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></span>
+      <span>Rename</span>
+    </div>
+    <div class="context-menu-item danger" id="ctx-menu-delete">
+      <span class="context-menu-icon"><svg class="ui-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>
+      <span>Delete</span>
+    </div>
+  </div>
+
+  <!-- Share File Public Link Modal -->
+  <div id="share-link-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span>Public File Link</span></h3>
+        <button id="btn-close-share-modal" class="modal-close-btn" title="Close"><svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-form-group">
+          <label>File</label>
+          <div id="share-file-name" class="modal-file-display"></div>
+        </div>
+
+        <div class="modal-form-group">
+          <label for="share-expiry-select">Link Expiration</label>
+          <select id="share-expiry-select" class="modal-text-input">
+            <option value="3600">1 hour</option>
+            <option value="86400" selected>24 hours (1 day)</option>
+            <option value="604800">7 days</option>
+            <option value="2592000">30 days</option>
+            <option value="31536000">1 year</option>
+          </select>
+        </div>
+
+        <div class="modal-form-group">
+          <label class="modal-checkbox-label">
+            <input type="checkbox" id="share-download-check">
+            <span>Force download (as attachment)</span>
+          </label>
+        </div>
+
+        <div class="modal-form-group">
+          <label>Public Link (bypasses authentication)</label>
+          <div class="modal-link-row">
+            <input type="text" id="share-link-url" class="modal-text-input" readonly placeholder="Generating link...">
+            <button id="btn-copy-share-link" class="btn-primary" title="Copy link"><svg class="ui-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span></button>
+          </div>
+          <div id="share-copy-status" class="modal-status-msg" style="display: none;"></div>
+        </div>
+
+        <div class="modal-info-box">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>Link is signed with SHA-256 HMAC, expires over time, and requires no authentication.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="share-open-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg><span>Open</span></a>
+        <button id="btn-done-share-modal" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Workspaces Modal -->
+  <div id="workspace-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-workspace-manager">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span>Manage Workspaces</span>
+        </h3>
+        <button id="btn-close-workspace-modal" class="modal-close-btn" title="Close"><svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="modal-body">
+        <!-- Create new workspace form -->
+        <div class="ws-modal-create-box">
+          <label for="modal-new-ws-name">Create new workspace</label>
+          <div class="ws-modal-create-row">
+            <input type="text" id="modal-new-ws-name" class="modal-text-input" placeholder="New workspace name...">
+            <button id="modal-btn-create-ws" class="btn-primary" title="Create workspace">
+              <svg class="ui-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Create</span>
+            </button>
+          </div>
+          <div id="modal-create-ws-error" class="modal-status-msg error" style="display: none;"></div>
+        </div>
+
+        <!-- Filter & list -->
+        <div class="ws-modal-list-section">
+          <div class="ws-modal-list-header">
+            <label>Available Workspaces (<span id="modal-ws-count">0</span>)</label>
+            <div class="ws-modal-search-wrapper">
+              <input type="text" id="modal-ws-search" class="modal-text-input ws-modal-search-input" placeholder="Filter workspaces...">
+            </div>
+          </div>
+          <div id="modal-ws-list" class="ws-modal-list">
+            <!-- Populated dynamically via renderModalWorkspaces -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-done-workspace-modal" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Workspace ZIP Modal -->
+  <div id="upload-zip-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><svg class="ui-icon" viewBox="0 0 24 24"><path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span>Upload Workspace (.zip)</span></h3>
+        <button id="btn-close-upload-modal" class="modal-close-btn" title="Close"><svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-form-group">
+          <label>Select ZIP archive</label>
+          <div id="modal-dropzone" class="modal-file-dropzone">
+            <div class="dropzone-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+            <div class="dropzone-text" id="dropzone-label">Click or drop .zip file here</div>
+            <div class="dropzone-subtext">Supported: .zip archives (up to 200 MB)</div>
+            <div id="dropzone-filename" class="modal-file-selected" style="display: none;"></div>
+          </div>
+          <input type="file" id="zip-file-input" accept=".zip,application/zip,application/x-zip-compressed" style="display: none;">
+        </div>
+
+        <div class="modal-form-group">
+          <label>Extract destination</label>
+          <div class="modal-radio-options">
+            <label class="modal-radio-label">
+              <input type="radio" name="upload-target-type" id="radio-ws-new" value="new" checked>
+              <span>To new workspace / name:</span>
+            </label>
+            <input type="text" id="upload-ws-name" class="modal-text-input" placeholder="Workspace name...">
+
+            <label class="modal-radio-label" id="label-ws-current" style="display: none;">
+              <input type="radio" name="upload-target-type" id="radio-ws-current" value="current">
+              <span id="upload-ws-current-text">To current workspace</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-form-group">
+          <label class="modal-checkbox-label">
+            <input type="checkbox" id="upload-overwrite-check" checked>
+            <span>Overwrite existing files</span>
+          </label>
+        </div>
+
+        <div id="upload-status-msg" class="modal-status-msg" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-upload" class="btn-secondary">Cancel</button>
+        <button id="btn-submit-upload" class="btn-primary" disabled>Upload and Extract</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Files to Workspace Modal -->
+  <div id="upload-files-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span>Upload Files to Workspace</span></h3>
+        <button id="btn-close-upload-files-modal" class="modal-close-btn" title="Close"><svg class="ui-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-form-group">
+          <label>Destination folder in workspace</label>
+          <div class="modal-folder-row">
+            <span id="upload-files-ws-badge" class="modal-target-badge"></span>
+            <input type="text" id="upload-files-dest-dir" class="modal-text-input" placeholder="Destination folder (empty for root)...">
+          </div>
+        </div>
+
+        <div class="modal-form-group">
+          <label>Select files</label>
+          <div id="modal-files-dropzone" class="modal-file-dropzone">
+            <div class="dropzone-icon"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
+            <div class="dropzone-text" id="files-dropzone-label">Click or drop files here</div>
+            <div class="dropzone-subtext">Supports uploading multiple files of any format (up to 200 MB)</div>
+            <div id="files-dropzone-list" class="modal-files-list" style="display: none;"></div>
+          </div>
+          <input type="file" id="file-upload-input" multiple style="display: none;">
+        </div>
+
+        <div class="modal-form-group">
+          <label class="modal-checkbox-label">
+            <input type="checkbox" id="upload-files-overwrite-check" checked>
+            <span>Overwrite existing files</span>
+          </label>
+        </div>
+
+        <div id="upload-files-status-msg" class="modal-status-msg" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-upload-files" class="btn-secondary">Cancel</button>
+        <button id="btn-submit-upload-files" class="btn-primary" disabled>Upload Files</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/static/app.js?v=27"></script>
+</body>
+</html>
