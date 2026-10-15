@@ -7,7 +7,7 @@ import { setupImageEditor } from "./imageEditor.js";
 // Configure Ace Editor if available
 if (typeof window !== "undefined" && window.ace) {
   try {
-    ace.config.set("basePath", "https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.2/");
+    ace.config.set("basePath", "/static/vendor/ace/1.36.2/");
   } catch (e) {
     console.warn("Could not set Ace basePath", e);
   }
