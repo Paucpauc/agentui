@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     locales \
     procps \
+    bash \
+    ca-certificates \
     curl \
     git \
     && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
@@ -40,27 +42,29 @@ RUN pytest tests/
 # Stage 3: Production runtime image
 FROM base AS production
 
-# Create user and group matching host user
-ARG USERNAME=jill
-ARG GROUPNAME=jill
-ARG UID=1001
-ARG GID=1002
-RUN (groupadd -g ${GID} ${GROUPNAME} || groupadd ${GROUPNAME} || true) && \
-    (useradd -u ${UID} -g ${GID} -m -s /bin/bash ${USERNAME} || useradd -m -s /bin/bash ${USERNAME} || true)
+# Dedicated unprivileged container account, independent of the host account
+RUN groupadd --gid 1002 appuser && \
+    useradd --uid 1001 --gid appuser --create-home --shell /bin/bash appuser
 
 WORKDIR /app
 COPY . /app
+COPY workspaces/AGENTS.md /usr/local/share/agent-webui/AGENTS.md
 
 # Prepare directories
-RUN mkdir -p /workspaces /home/${USERNAME}/.gemini && \
-    chown -R ${UID}:${GID} /app /workspaces /home/${USERNAME} /opt/venv
+RUN mkdir -p /workspaces /home/appuser/.gemini /home/appuser/.local/bin && \
+    chown -R appuser:appuser /workspaces /home/appuser
 
 ENV WORKSPACE_BASE=/workspaces \
-    AGENT_BIN=/usr/local/bin/agent \
-    HOME=/home/jill
+    AGENT_BIN=/home/appuser/.local/bin/agy \
+    HOME=/home/appuser \
+    AGY_AUTO_UPDATE=1
 
-USER ${USERNAME}:${GROUPNAME}
+ENV PATH="${HOME}/.local/bin:${PATH}"
+RUN chmod +x /app/docker-entrypoint.sh
+
+USER appuser:appuser
 
 EXPOSE 8080
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -5,7 +5,8 @@ __pycache__/
 .pytest_cache/
 
 # User workspaces & environment variables
-workspaces/
+workspaces/*
+!workspaces/AGENTS.md
 .env
 
 # Virtual environments

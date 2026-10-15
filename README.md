@@ -32,7 +32,7 @@ A full-featured WebUI for interacting with the **agent** CLI in your browser.
   - Option for forced download (`download=1`) or inline viewing in the browser.
 - **Docker containerization**:
   - Multi-stage `Dockerfile`: base image, automated testing stage (`test`), and production image (`production`).
-  - `docker-compose.yml` for instant startup with configuration mounts, `.env`, and the `agent` binary.
+  - `docker-compose.yml` installs `agy` automatically and stores its binary and configuration in named Docker volumes.
 
 ## Quick Start
 
@@ -52,6 +52,39 @@ AUTH_PASSWORD=your_secure_password
 docker compose up -d --build
 ```
 The web interface will be available at: [http://localhost:8080](http://localhost:8080)
+
+No local agent installation is required. On first startup, the container downloads
+`agy` using the [official installer](https://www.antigravity.google/docs/cli/install/).
+Internet access is required for the initial installation. On subsequent container
+starts, it runs `agy update`; if the update fails, it uses the installed version.
+Set `AGY_AUTO_UPDATE=0` in `.env` to disable startup updates. To check for updates
+immediately, run `docker compose restart webui`.
+
+Open the terminal in the web interface and complete the agent's sign-in flow on
+first use. Alternatively, launch an interactive session with
+`docker compose exec webui agy`. This installation has its own credentials;
+it does not import your host's login or configuration.
+
+The service runs as the unprivileged `appuser` account (UID 1001, GID 1002),
+defined in the image independently of your host account. No host directories
+or binaries are mounted.
+
+Compose manages three persistent volumes: `agy-bin` for the executable,
+`gemini-data` for `/home/appuser/.gemini` (credentials, settings, and agent data),
+and `workspaces-data` for `/workspaces`. They survive container recreation and
+`docker compose down`. Running `docker compose down -v` deletes them, including
+the saved login and workspaces.
+
+The image includes `workspaces/AGENTS.md` as a default template. On startup it is
+copied to `/workspaces/AGENTS.md` only if that file is absent, preserving edits
+already made in the volume. Other local workspace files are excluded from the
+image and are not imported automatically.
+
+To import existing local workspaces after starting the service, run:
+```bash
+docker compose cp ./workspaces/. webui:/workspaces/
+```
+This explicit import also replaces files with matching names in the volume.
 
 ### 3. Run Tests in Docker
 ```bash
