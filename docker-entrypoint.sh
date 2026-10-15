@@ -18,7 +18,7 @@ if [[ ! -x "$agy_bin" ]]; then
     curl --fail --show-error --silent --location --retry 3 \
         --connect-timeout 15 --max-time 120 \
         https://antigravity.google/cli/install.sh -o "$installer"
-    bash "$installer" --skip-aliases --skip-path
+    bash "$installer" --dir "$HOME/.local/bin"
     rm -f "$installer"
     trap - EXIT
     if [[ ! -x "$agy_bin" ]]; then
