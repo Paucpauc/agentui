@@ -110,9 +110,7 @@ export function createPaneElement({ tabId, filePath, fileName, previewType, canR
         ${isExecutableFile(fileName) && !isBackupFile ? `
           <button class="btn-icon btn-execute-file" title="Execute in Agent TTY">${getIconSvg("zap")} <span>Execute</span></button>
         ` : ''}
-        ${(previewType === 'office' || previewType === 'pdf') ? `
-          <a class="btn-icon btn-download-file-header" href="/api/files/raw?workspace=${encodeURIComponent(state.currentWorkspace)}&path=${encodeURIComponent(filePath)}" download="${escapeHtml(fileName)}" title="Download file">${getIconSvg("download")} <span>Download</span></a>
-        ` : ''}
+        <a class="btn-icon btn-download-file-header" href="/api/files/raw?workspace=${encodeURIComponent(state.currentWorkspace)}&path=${encodeURIComponent(filePath)}" download="${escapeHtml(fileName)}" title="Download file">${getIconSvg("download")} <span>Download</span></a>
         ${!isBackupFile ? `<button class="btn-icon btn-share-file" title="Public link">${getIconSvg("link")} <span>Share</span></button>` : ''}
         ${isBackupFile ? `<button class="btn-primary btn-restore-file" title="Restore this file to workspace">${getIconSvg("rotate-ccw")} <span>Restore</span></button>` : ''}
         ${!isBackupFile ? `<button class="btn-icon btn-rename-file" title="Rename file">${getIconSvg("edit")} <span>Rename</span></button>` : ''}
