@@ -368,7 +368,8 @@ export function isDirCollapsed(item) {
   if (state.expandedDirs && (state.expandedDirs.has(normPath) || state.expandedDirs.has(item.path))) {
     return false;
   }
-  if (normPath === ".backup" || item.name === ".backup" || normPath.startsWith(".backup/")) {
+  const name = item.name || normPath.split("/").filter(Boolean).pop() || "";
+  if (name.startsWith(".")) {
     return true;
   }
   return false;

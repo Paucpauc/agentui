@@ -11,8 +11,7 @@ export const state = {
   fileWatcherReconnectTimer: null,
   filePollTimer: null,
   loadFilesDebounceTimer: null,
-  lastRenderedTreeJson: null,
-  collapsedDirs: new Set([".backup"]),
+  collapsedDirs: new Set(),
   expandedDirs: new Set(),
   workspaceFilesMap: new Map(), // path -> { name, is_dir, children }
   activeInlineRename: null,

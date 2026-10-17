@@ -163,7 +163,6 @@ export function selectWorkspace(name, force = false) {
 
   state.currentWorkspace = name;
   state.collapsedDirs.clear();
-  state.collapsedDirs.add(".backup");
   if (state.expandedDirs) state.expandedDirs.clear();
   state.workspaceFilesMap.clear();
   state.lastRenderedTreeJson = null;
